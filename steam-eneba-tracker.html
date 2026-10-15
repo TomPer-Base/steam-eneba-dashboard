@@ -415,21 +415,20 @@
 
         function handleImageError(imgElem) {
             const appId = imgElem.getAttribute('data-appid');
-            const gameName = imgElem.getAttribute('data-gamename') || '';
             const step = parseInt(imgElem.getAttribute('data-step') || '1');
             
             if (step === 1 && appId) {
-                // Step 2: Try SteamDB Capsule CDN directly
+                // Step 2: Try SteamDB Capsule CDN
                 imgElem.setAttribute('data-step', '2');
                 imgElem.src = `https://steamdb.info/static/cdn/steam/apps/${appId}/header.jpg`;
             } else if (step === 2 && appId) {
-                // Step 3: Try Steam CDN Capsule 184x69 format
+                // Step 3: Try Steam Cloudflare Capsule 460x215 format
                 imgElem.setAttribute('data-step', '3');
-                imgElem.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/capsule_184x69.jpg`;
+                imgElem.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/capsule_460x215.jpg`;
             } else if (step === 3 && appId) {
-                // Step 4: Try Steam CDN Library Hero format
+                // Step 4: Try Steam Library Header 600x900 portrait format
                 imgElem.setAttribute('data-step', '4');
-                imgElem.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x300.jpg`;
+                imgElem.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`;
             } else {
                 // Final Fallback: Hide image element and show styled initial placeholder
                 imgElem.style.display = 'none';
@@ -474,7 +473,7 @@
                 const cardHtml = `
                     <div class="glass-card rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1">
                         <div>
-                            <!-- Cover Thumbnail & Image Fallback Chain (Steam Static -> SteamDB CDN -> Capsule -> Initials) -->
+                            <!-- Cover Thumbnail & Image Fallback Chain -->
                             <div class="relative w-full h-36 bg-gradient-to-br from-neutral-900 via-neutral-800 to-amber-950 border-b border-theme-border/80 overflow-hidden flex items-center justify-center">
                                 ${coverImgUrl ? `
                                     <img src="${coverImgUrl}" alt="${safeGameName}" data-step="1" data-appid="${appId || ''}" data-gamename="${safeGameName}"
