@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam vs Eneba Price Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter & Space Grotesk Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            bg: '#12100e',        /* Deep Charcoal / Dark Espresso */
+                            card: '#1c1815',      /* Warm Dark Brown */
+                            cardHover: '#26211d', /* Elevated Charcoal-Brown */
+                            border: '#3a312a',    /* Subdued Bronze Border */
+                            bronze: '#a87c4f',    /* Warm Bronze */
+                            gold: '#dfac42',      /* Radiant Gold */
+                            goldLight: '#f5d378', /* Soft Light Gold */
+                            goldMuted: '#96742e', /* Muted Gold */
+                        },
+                        brand: {
+                            steamBg: '#171a21',
+                            steamHover: '#2a475e',
+                            steamText: '#66c0f4',
+                            steamBorder: '#1b2838',
+                            enebaBg: '#531380',
+                            enebaHover: '#6a0dad',
+                            enebaOrange: '#ff6600',
+                            enebaBorder: '#802bb1'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #12100e;
+            color: #f5f0eb;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(168, 124, 79, 0.07) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(223, 172, 66, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(28, 24, 21, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(168, 124, 79, 0.2);
+        }
+        .glass-card:hover {
+            border-color: rgba(223, 172, 66, 0.5);
+            box-shadow: 0 10px 30px -5px rgba(223, 172, 66, 0.12);
+        }
+        .gold-glow {
+            box-shadow: 0 0 20px rgba(223, 172, 66, 0.25);
+        }
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #f5d378 0%, #dfac42 50%, #a87c4f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gold-btn-gradient {
+            background: linear-gradient(135deg, #e5b64c 0%, #c49133 100%);
+        }
+        .gold-btn-gradient:hover {
+            background: linear-gradient(135deg, #f5d378 0%, #dfac42 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-theme-gold selection:text-slate-950">
+
+    <header class="sticky top-0 z-50 glass-card border-b border-theme-border/80 bg-theme-bg/90 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            
+            <!-- Branding -->
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-xl gold-btn-gradient flex items-center justify-center text-slate-950 text-xl font-bold gold-glow">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold font-display tracking-tight text-white flex items-center gap-2">
+                        Steam vs Eneba <span class="text-theme-gold text-xs px-2.5 py-0.5 rounded-full bg-theme-gold/10 border border-theme-gold/30 uppercase tracking-wider font-sans">Tracker</span>
+                    </h1>
+                    <div class="flex items-center gap-2 text-xs text-amber-200/60 mt-0.5">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-theme-gold"></span>
+                        </span>
+                        Sync Status: <span class="text-theme-goldLight font-medium">Live</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar & Controls -->
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="relative w-full md:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-200/40 text-sm"></i>
+                    <input type="text" id="searchInput" onkeyup="applyFiltersAndSort()" placeholder="Search game title..." 
+                           class="w-full bg-theme-card/90 border border-theme-border rounded-xl pl-9 pr-4 py-2 text-sm text-amber-100 placeholder-amber-200/30 focus:outline-none focus:border-theme-gold focus:ring-1 focus:ring-theme-gold transition-all">
+                </div>
+                <button onclick="fetchWishlistData()" title="Refresh Data" 
+                        class="p-2.5 bg-theme-card hover:bg-theme-cardHover border border-theme-border rounded-xl text-amber-200/70 hover:text-theme-gold transition-all flex-shrink-0">
+                    <i id="refreshIcon" class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button onclick="openConfigModal()" title="Database & Steam API Settings" 
+                        class="p-2.5 bg-theme-card hover:bg-theme-cardHover border border-theme-border rounded-xl text-amber-200/70 hover:text-theme-goldLight transition-all flex-shrink-0">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
+
+        <!-- Stat Summary Badges -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-theme-gold">
+                <div>
+                    <p class="text-xs font-medium text-amber-200/50 uppercase tracking-wider font-display">Highest Discount</p>
+                    <h3 id="topDiscountStat" class="text-2xl font-bold gold-gradient-text mt-1">--%</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-theme-gold/10 border border-theme-gold/20 flex items-center justify-center text-theme-gold text-xl">
+                    <i class="fa-solid fa-fire-flame-curved"></i>
+                </div>
+            </div>
+
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-theme-bronze">
+                <div>
+                    <p class="text-xs font-medium text-amber-200/50 uppercase tracking-wider font-display">Discounted Deals Recorded</p>
+                    <h3 id="totalItemsStat" class="text-2xl font-bold text-amber-100 mt-1">0 Games</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-theme-bronze/10 border border-theme-bronze/20 flex items-center justify-center text-theme-bronze text-xl">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+            </div>
+
+            <div class="glass-card p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-amber-500">
+                <div>
+                    <p class="text-xs font-medium text-amber-200/50 uppercase tracking-wider font-display">Deep Discounts (≥50%)</p>
+                    <h3 id="deepDiscountStat" class="text-2xl font-bold text-amber-300 mt-1">0 Deals</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Controls Bar -->
+        <div class="glass-card p-4 rounded-2xl mb-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border border-theme-border/80">
+            <div class="flex items-center gap-2 text-sm text-white font-display font-medium">
+                <i class="fa-solid fa-sliders text-theme-gold"></i>
+                <span>Filter & Sort Controls</span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <label for="filterSelect" class="text-xs text-amber-200/60 font-medium">Filter:</label>
+                    <select id="filterSelect" onchange="applyFiltersAndSort()" 
+                            class="bg-theme-bg border border-theme-border text-amber-100 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-theme-gold">
+                        <option value="all">All Discounted Games</option>
+                        <option value="heavyDiscount">Deep Discount (≥50% OFF)</option>
+                        <option value="moderateDiscount">Moderate Discount (&lt;50% OFF)</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label for="sortSelect" class="text-xs text-amber-200/60 font-medium">Sort By:</label>
+                    <select id="sortSelect" onchange="applyFiltersAndSort()" 
+                            class="bg-theme-bg border border-theme-border text-amber-100 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-theme-gold">
+                        <option value="discountDesc">Highest Discount %</option>
+                        <option value="priceAsc">Lowest Steam Price</option>
+                        <option value="priceDesc">Highest Steam Price</option>
+                        <option value="nameAsc">Game Name (A - Z)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-20 text-amber-200/50">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-theme-gold mb-4"></i>
+            <p class="text-sm font-medium">Fetching wishlist deals from Supabase...</p>
+        </div>
+
+        <!-- Empty / Error State -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-20 text-amber-200/50 glass-card rounded-2xl border border-dashed border-theme-border">
+            <i class="fa-solid fa-folder-open text-5xl mb-4 text-amber-200/20"></i>
+            <p class="text-base font-semibold text-white mb-1" id="emptyTitle">No Data Available</p>
+            <p class="text-sm text-amber-200/50 text-center max-w-md mb-6" id="emptyDesc">Make sure your Supabase credentials are set and your database has entries.</p>
+            <button onclick="openConfigModal()" class="px-5 py-2.5 gold-btn-gradient text-slate-950 font-bold text-sm rounded-xl transition-all shadow-lg gold-glow">
+                Configure Credentials
+            </button>
+        </div>
+
+        <!-- Games Grid -->
+        <div id="gamesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Dynamic Cards Populated via JS -->
+        </div>
+
+    </main>
+
+    <footer class="glass-card border-t border-theme-border/80 bg-theme-bg/95 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-amber-200/50">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-database text-theme-gold"></i>
+                <span>Database: <strong class="text-amber-100">wishlist_prices</strong></span>
+            </div>
+            <div>
+                Powered by <span class="text-amber-200 font-medium">Supabase</span> &amp; <span class="text-amber-200 font-medium">GitHub Actions</span>
+            </div>
+            <div id="lastUpdatedText" class="text-amber-200/40">
+                Last updated: <span class="text-amber-100">Just now</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card bg-theme-card border border-theme-border rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-amber-200/50 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-9 h-9 rounded-lg bg-theme-gold/15 border border-theme-gold/30 flex items-center justify-center text-theme-gold">
+                    <i class="fa-solid fa-gear"></i>
+                </div>
+                <h3 class="text-lg font-bold font-display text-white">Database &amp; Steam Settings</h3>
+            </div>
+
+            <form id="configForm" onsubmit="saveConfig(event)" class="space-y-4">
+                <div class="border-b border-theme-border pb-3 mb-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-theme-gold mb-2">1. Supabase Database Configuration</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-amber-200/70 mb-1">SUPABASE_URL</label>
+                            <input type="text" id="supabaseUrlInput" placeholder="https://xxxxxxxxxxxx.supabase.co" required
+                                   class="w-full bg-theme-bg/80 border border-theme-border rounded-xl px-3 py-2 text-sm text-amber-100 focus:outline-none focus:border-theme-gold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-amber-200/70 mb-1">SUPABASE_ANON_KEY (Public Key)</label>
+                            <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR..." required
+                                   class="w-full bg-theme-bg/80 border border-theme-border rounded-xl px-3 py-2 text-sm text-amber-100 focus:outline-none focus:border-theme-gold">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-theme-gold mb-1">2. Steam Web API (Optional Sync)</h4>
+                    <p class="text-[11px] text-amber-200/50 mb-2">Provide these if you want your Python scraper / GitHub action to query all ~400 items directly from your Steam account.</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-amber-200/70 mb-1">STEAM_API_KEY (Optional)</label>
+                            <input type="password" id="steamApiKeyInput" placeholder="Optional - Secret Steam Web API Key"
+                                   class="w-full bg-theme-bg/80 border border-theme-border rounded-xl px-3 py-2 text-sm text-amber-100 focus:outline-none focus:border-theme-gold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-amber-200/70 mb-1">STEAM_ID_64 (Optional)</label>
+                            <input type="text" id="steamIdInput" placeholder="76561198xxxxxxxx"
+                                   class="w-full bg-theme-bg/80 border border-theme-border rounded-xl px-3 py-2 text-sm text-amber-100 focus:outline-none focus:border-theme-gold">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-3 border-t border-theme-border">
+                    <button type="button" onclick="closeConfigModal()" class="px-4 py-2 bg-theme-bg hover:bg-theme-cardHover text-amber-200/60 text-xs font-semibold rounded-xl border border-theme-border">Cancel</button>
+                    <button type="submit" class="px-4 py-2 gold-btn-gradient text-slate-950 font-bold text-xs rounded-xl transition-all shadow-md">Save &amp; Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let SUPABASE_URL = localStorage.getItem('STEAM_TRACKER_URL') || "https://rtdfiuwnlkiigjohgaef.supabase.co"; 
+        let SUPABASE_KEY = localStorage.getItem('STEAM_TRACKER_KEY') || ""; 
+        let STEAM_API_KEY = localStorage.getItem('STEAM_API_KEY') || "";
+        let STEAM_ID_64 = localStorage.getItem('STEAM_ID_64') || "";
+
+        let supabaseClient = null;
+        let wishlistGames = [];
+
+        function formatIDR(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        // Helper: Extracts Steam App ID from game row
+        function extractAppId(game) {
+            if (game.app_id) return game.app_id;
+            if (game.steam_url) {
+                const match = game.steam_url.match(/\/app\/(\d+)/);
+                if (match && match[1]) return match[1];
+            }
+            return null;
+        }
+
+        function initSupabase() {
+            if (SUPABASE_URL && SUPABASE_KEY) {
+                try {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    fetchWishlistData();
+                } catch (err) {
+                    console.error("Initialization error:", err);
+                    showEmptyState("Invalid Configuration", "Could not initialize Supabase client.");
+                }
+            } else {
+                openConfigModal();
+                showEmptyState("Credentials Required", "Please enter your Supabase URL and public Anon Key in settings.");
+            }
+        }
+
+        async function fetchWishlistData() {
+            const loadingState = document.getElementById('loadingState');
+            const emptyState = document.getElementById('emptyState');
+            const gamesGrid = document.getElementById('gamesGrid');
+            const refreshIcon = document.getElementById('refreshIcon');
+
+            loadingState.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            gamesGrid.innerHTML = '';
+            refreshIcon.classList.add('fa-spin');
+
+            if (!supabaseClient) {
+                loadingState.classList.add('hidden');
+                refreshIcon.classList.remove('fa-spin');
+                showEmptyState("Database Not Connected", "Please enter your public Supabase credentials in settings.");
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('wishlist_prices')
+                    .select('*');
+
+                refreshIcon.classList.remove('fa-spin');
+                loadingState.classList.add('hidden');
+
+                if (error) throw error;
+
+                wishlistGames = data || [];
+
+                if (wishlistGames.length === 0) {
+                    showEmptyState("Wishlist Database Empty", "No deals saved yet in 'wishlist_prices' table.");
+                    updateStats([]);
+                    return;
+                }
+
+                updateStats(wishlistGames);
+                applyFiltersAndSort();
+                document.getElementById('lastUpdatedText').innerText = `Last updated: ${new Date().toLocaleTimeString('id-ID')}`;
+
+            } catch (err) {
+                console.error("Supabase Query Error:", err);
+                refreshIcon.classList.remove('fa-spin');
+                loadingState.classList.add('hidden');
+                
+                let errorMsg = err.message || "Could not connect to Supabase table.";
+                if (errorMsg.includes("secret API key")) {
+                    errorMsg = "You entered your Secret key! Browsers only allow the public Anon Key.";
+                    openConfigModal();
+                }
+                showEmptyState("Failed to Load Data", errorMsg);
+            }
+        }
+
+        function applyFiltersAndSort() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filterType = document.getElementById('filterSelect').value;
+            const sortType = document.getElementById('sortSelect').value;
+
+            let processed = wishlistGames.filter(game => {
+                const matchesSearch = (game.game_name || '').toLowerCase().includes(searchQuery);
+                const discount = game.discount_percent || 0;
+
+                if (!matchesSearch) return false;
+
+                if (filterType === 'heavyDiscount') return discount >= 50;
+                if (filterType === 'moderateDiscount') return discount > 0 && discount < 50;
+                return true;
+            });
+
+            processed.sort((a, b) => {
+                const discountA = a.discount_percent || 0;
+                const discountB = b.discount_percent || 0;
+                const priceA = a.steam_price || 0;
+                const priceB = b.steam_price || 0;
+                const nameA = (a.game_name || '').toLowerCase();
+                const nameB = (b.game_name || '').toLowerCase();
+
+                if (sortType === 'discountDesc') return discountB - discountA;
+                if (sortType === 'priceAsc') return priceA - priceB;
+                if (sortType === 'priceDesc') return priceB - priceA;
+                if (sortType === 'nameAsc') return nameA.localeCompare(nameB);
+                return 0;
+            });
+
+            renderGames(processed);
+        }
+
+        function handleImageError(imgElem) {
+            const appId = imgElem.getAttribute('data-appid');
+            const gameName = imgElem.getAttribute('data-gamename') || '';
+            const step = parseInt(imgElem.getAttribute('data-step') || '1');
+            
+            if (step === 1 && appId) {
+                // Step 2: Try SteamDB Capsule CDN directly
+                imgElem.setAttribute('data-step', '2');
+                imgElem.src = `https://steamdb.info/static/cdn/steam/apps/${appId}/header.jpg`;
+            } else if (step === 2 && appId) {
+                // Step 3: Try Steam CDN Capsule 184x69 format
+                imgElem.setAttribute('data-step', '3');
+                imgElem.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/capsule_184x69.jpg`;
+            } else if (step === 3 && appId) {
+                // Step 4: Try Steam CDN Library Hero format
+                imgElem.setAttribute('data-step', '4');
+                imgElem.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x300.jpg`;
+            } else {
+                // Final Fallback: Hide image element and show styled initial placeholder
+                imgElem.style.display = 'none';
+                if (imgElem.nextElementSibling) {
+                    imgElem.nextElementSibling.classList.remove('hidden');
+                    imgElem.nextElementSibling.classList.add('flex');
+                }
+            }
+        }
+
+        function renderGames(games) {
+            const gamesGrid = document.getElementById('gamesGrid');
+            gamesGrid.innerHTML = '';
+
+            if (games.length === 0) {
+                showEmptyState("No Matching Games", "Try relaxing your search query or filter options.");
+                return;
+            } else {
+                document.getElementById('emptyState').classList.add('hidden');
+            }
+
+            games.forEach(game => {
+                const discount = game.discount_percent || 0;
+                const price = game.steam_price ? formatIDR(game.steam_price) : 'N/A';
+                const enebaSearchUrl = `https://www.eneba.com/store?q=${encodeURIComponent(game.game_name)}`;
+                const appId = extractAppId(game);
+                
+                // Primary Steam Cover URL
+                const coverImgUrl = appId ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg` : '';
+
+                // Initials for fallback thumbnail
+                const initials = (game.game_name || 'G').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+                // High-Contrast Red & Emerald Discount Badge depending on offer strength
+                const badgeColorClass = discount >= 50 
+                    ? 'bg-red-600 text-white shadow-red-900/50' 
+                    : (discount > 0 ? 'bg-emerald-600 text-white shadow-emerald-900/50' : 'bg-neutral-700 text-amber-200/60');
+
+                // Safe name string for attributes
+                const safeGameName = (game.game_name || 'Game').replace(/"/g, '&quot;');
+
+                const cardHtml = `
+                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1">
+                        <div>
+                            <!-- Cover Thumbnail & Image Fallback Chain (Steam Static -> SteamDB CDN -> Capsule -> Initials) -->
+                            <div class="relative w-full h-36 bg-gradient-to-br from-neutral-900 via-neutral-800 to-amber-950 border-b border-theme-border/80 overflow-hidden flex items-center justify-center">
+                                ${coverImgUrl ? `
+                                    <img src="${coverImgUrl}" alt="${safeGameName}" data-step="1" data-appid="${appId || ''}" data-gamename="${safeGameName}"
+                                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                                         onerror="handleImageError(this)">
+                                    <div class="hidden flex-col items-center justify-center text-amber-200/40 font-bold font-display text-xl w-full h-full bg-neutral-900">
+                                        <i class="fa-solid fa-gamepad text-2xl mb-1 text-theme-gold/40"></i>
+                                        <span>${initials}</span>
+                                    </div>
+                                ` : `
+                                    <div class="flex flex-col items-center justify-center text-amber-200/40 font-bold font-display text-xl w-full h-full bg-neutral-900">
+                                        <i class="fa-solid fa-gamepad text-2xl mb-1 text-theme-gold/40"></i>
+                                        <span>${initials}</span>
+                                    </div>
+                                `}
+
+                                <!-- High-Contrast Bold Discount Badge -->
+                                ${discount > 0 ? `
+                                    <div class="absolute top-2.5 right-2.5 z-10">
+                                        <span class="${badgeColorClass} font-extrabold text-xs px-2.5 py-1 rounded-lg shadow-lg border border-white/20 flex items-center gap-1 backdrop-blur-sm">
+                                            <i class="fa-solid fa-bolt text-[10px]"></i> -${discount}%
+                                        </span>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Game Content & Title -->
+                            <div class="p-4">
+                                <h3 class="font-bold text-amber-50 text-base font-display line-clamp-2 leading-snug" title="${safeGameName}">${safeGameName}</h3>
+                                
+                                <!-- Price Info -->
+                                <div class="mt-3">
+                                    <p class="text-[11px] text-amber-200/50 uppercase tracking-wider font-medium">Steam Store Price</p>
+                                    <p class="text-lg font-bold gold-gradient-text font-display mt-0.5">${price}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trademark Branded Buttons -->
+                        <div class="p-4 pt-0">
+                            <div class="grid grid-cols-2 gap-2.5 pt-3 border-t border-theme-border">
+                                <!-- Steam Button -->
+                                <a href="${game.steam_url || '#'}" target="_blank" rel="noopener noreferrer" 
+                                   class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-brand-steamBg hover:bg-brand-steamHover text-brand-steamText border border-brand-steamBorder text-xs font-bold transition-all shadow-md">
+                                    <i class="fa-brands fa-steam text-sm"></i> Steam
+                                </a>
+
+                                <!-- Eneba Button -->
+                                <a href="${game.eneba_url || enebaSearchUrl}" target="_blank" rel="noopener noreferrer" 
+                                   class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-brand-enebaBg hover:bg-brand-enebaHover text-white border border-brand-enebaBorder text-xs font-bold transition-all shadow-md group">
+                                    <i class="fa-solid fa-cart-shopping text-brand-enebaOrange group-hover:text-white transition-colors"></i> Eneba
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                gamesGrid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        function updateStats(games) {
+            const topDiscountStat = document.getElementById('topDiscountStat');
+            const totalItemsStat = document.getElementById('totalItemsStat');
+            const deepDiscountStat = document.getElementById('deepDiscountStat');
+
+            if (games.length === 0) {
+                topDiscountStat.innerText = '--%';
+                totalItemsStat.innerText = '0 Deals';
+                deepDiscountStat.innerText = '0 Deals';
+                return;
+            }
+
+            const maxDiscount = Math.max(...games.map(g => g.discount_percent || 0));
+            const deepDiscountsCount = games.filter(g => (g.discount_percent || 0) >= 50).length;
+
+            topDiscountStat.innerText = `-${maxDiscount}%`;
+            totalItemsStat.innerText = `${games.length} Deals`;
+            deepDiscountStat.innerText = `${deepDiscountsCount} Deals`;
+        }
+
+        function showEmptyState(title, description) {
+            document.getElementById('emptyTitle').innerText = title;
+            document.getElementById('emptyDesc').innerText = description;
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('flex');
+        }
+
+        function openConfigModal() {
+            document.getElementById('supabaseUrlInput').value = SUPABASE_URL;
+            document.getElementById('supabaseKeyInput').value = SUPABASE_KEY;
+            document.getElementById('steamApiKeyInput').value = STEAM_API_KEY;
+            document.getElementById('steamIdInput').value = STEAM_ID_64;
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        function saveConfig(e) {
+            e.preventDefault();
+            SUPABASE_URL = document.getElementById('supabaseUrlInput').value.trim();
+            SUPABASE_KEY = document.getElementById('supabaseKeyInput').value.trim();
+            STEAM_API_KEY = document.getElementById('steamApiKeyInput').value.trim();
+            STEAM_ID_64 = document.getElementById('steamIdInput').value.trim();
+
+            localStorage.setItem('STEAM_TRACKER_URL', SUPABASE_URL);
+            localStorage.setItem('STEAM_TRACKER_KEY', SUPABASE_KEY);
+            localStorage.setItem('STEAM_API_KEY', STEAM_API_KEY);
+            localStorage.setItem('STEAM_ID_64', STEAM_ID_64);
+
+            closeConfigModal();
+            initSupabase();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initSupabase();
+        });
+    </script>
+</body>
+</html>
